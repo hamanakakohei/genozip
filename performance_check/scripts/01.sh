@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set +euo pipefail
+set -euo pipefail
 
 export PATH=${PATH}:/path/to/genozip-linux-x86_64/
 export PATH=${PATH}:/path/to/samtools-1.17/bin/
