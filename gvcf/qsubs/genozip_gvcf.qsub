@@ -1,0 +1,40 @@
+#!/bin/bash
+#$ -S /bin/bash
+#$ -N genozip_gvcf
+#$ -cwd
+#$ -pe OpenMP 5
+#$ -l s_vmem=10G
+#$ -q aaa.q
+#$ -o logs/$TASK_ID.log
+#$ -e logs/$TASK_ID.log
+
+set -euo pipefail
+
+
+GENOZIP_SCRIPT="/path/to/genozip_gvcf.sh"
+REF_GENOZIP="/path/to/Homo_sapiens_assembly38.ref.genozip"
+SAMPLE_LIST="inputs/sample_gvcf.txt"
+INTERVAL_SECONDS=${1:-60} # デフォルトは60秒
+
+
+# 行番号（TASK_ID）からサンプル名、FASTQ名、CRAM名などを得ます
+read SAMPLE_ID GVCF < <(sed -n "${SGE_TASK_ID}p" $SAMPLE_LIST)
+echo "Sample: $SAMPLE_ID"
+echo "GVCF: $GVCF"
+
+
+# gvcfを圧縮します
+LOG="${GVCF%.gz}.genozip.log"
+
+$GENOZIP_SCRIPT \
+  $GVCF \
+  $REF_GENOZIP \
+  $NSLOTS \
+  > $LOG 2>&1
+
+echo "finished: $GVCF"
+
+
+# サーバーの過熱を防ぐために休みます
+sleep "$INTERVAL_SECONDS"
+echo "Sleeping for $INTERVAL_SECONDS seconds"
