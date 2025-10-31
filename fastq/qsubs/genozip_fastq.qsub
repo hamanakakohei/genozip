@@ -1,0 +1,44 @@
+#!/bin/bash
+#$ -S /bin/bash
+#$ -N genozip_fq
+#$ -cwd
+#$ -pe OpenMP 5
+#$ -l s_vmem=20G
+#$ -q aaa.q
+#$ -o logs/$TASK_ID.log
+#$ -e logs/$TASK_ID.log
+
+set -euo pipefail
+
+# usage: 
+# 引数1でサーバーが過熱しないように休み時間を指定できる
+
+REF_GENOZIP="/path/to/Homo_sapiens_assembly38.ref.genozip"
+SAMPLE_LIST="inputs/sample_fastq-prefix_cram__bete07.txt"   # 空白区切り
+INTERVAL_SECONDS=${1:-60} # デフォルトは60秒
+
+
+# 行番号（TASK_ID）からサンプル名、FASTQ名、CRAM名などを得ます
+read SAMPLE_ID FQ_PREFIX CRAM_PATH < <(sed -n "${SGE_TASK_ID}p" $SAMPLE_LIST)
+echo "Sample: $SAMPLE_ID"
+echo "FASTQ: $FQ_PREFIX"
+echo "CRAM: $CRAM_PATH"
+
+
+# bamassオプションでCRAMを利用しつつ、FASTQを圧縮します
+# わざわざログをqsubと別に作って、md5などの記録をfqのディレクトリに残すようにする
+LOG="${FQ_PREFIX}_R1+2.fastq.genozip.log"
+
+scripts/genozip_fastq_replace.sh \
+  $FQ_PREFIX \
+  $CRAM_PATH \
+  $REF_GENOZIP \
+  $NSLOTS \
+  > $LOG 2>&1
+
+echo "finished: $FQ_PREFIX"
+
+
+# サーバーの過熱を防ぐために休みます
+sleep "$INTERVAL_SECONDS"
+echo "Sleeping for $INTERVAL_SECONDS seconds"
